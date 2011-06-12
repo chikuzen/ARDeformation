@@ -32,8 +32,8 @@ class DAR_Padding : public GenericVideoFilter {
     PClip padded;
 
 public:
-    DAR_Padding(PClip _child, const float _dar_x, const float _dar_Y,
-                const int align, const int _color, IScriptEnvironment* env);
+    DAR_Padding(PClip _child, const float _dar_x, const float _dar_y,
+                const int align, const int color, IScriptEnvironment* env);
     ~DAR_Padding() { }
     PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
 };
@@ -53,11 +53,10 @@ public:
 
 DAR_Padding::
 DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int align,
-            const int _color, IScriptEnvironment* env) : GenericVideoFilter(_child)
+            const int color, IScriptEnvironment* env) : GenericVideoFilter(_child)
 {
     double dar_x = !_dar_x ? (double)vi.width : (double)_dar_x;
     double dar_y = !_dar_y ? (double)vi.height : (double)_dar_y;
-    int color = !_color ? 0x000000 : _color;
 
     int dest_width = vi.width;
     int dest_height = vi.height;
@@ -77,13 +76,13 @@ DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int alig
     dest_width += dest_width % subsample_h;
     dest_height += dest_height % subsample_v;
 
-    int pad_left   = ((dest_width - vi.width) >> 1)
-                    - (((dest_width - vi.width) >> 1) % subsample_h);
-    pad_left -= pad_left % align;
-    int pad_right  = dest_width - (vi.width + pad_left);
-    int pad_top    = ((dest_height - vi.height) >> 1)
-                    - (((dest_height - vi.height) >> 1) % subsample_v);
-    pad_top -= pad_top % align;
+    int pad_left = ((dest_width - vi.width) >> 1) - (((dest_width - vi.width) >> 1) % subsample_h);
+    if ((pad_left -= (pad_left % align)) % subsample_h)
+        env->ThrowError("DAR_Padding: Invalid value of \"align\".");
+    int pad_right = dest_width - (vi.width + pad_left);
+    int pad_top = ((dest_height - vi.height) >> 1) - (((dest_height - vi.height) >> 1) % subsample_v);
+    if ((pad_top -= (pad_top % align)) % subsample_v)
+        env->ThrowError("DAR_Padding: Invalid value of \"align\".");
     int pad_bottom = dest_height - (vi.height + pad_top);
 
     vi.width = dest_width;
@@ -228,8 +227,6 @@ AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvir
         env->ThrowError("DAR_Padding: invalid argument \"dar_y\"");
     if (align < 1)
         env->ThrowError("DAR_Padding: \"align\" needs to be 1 or higher integer.");
-    if (cl < 0 || cl > 0xffffff)
-        env->ThrowError("DAR_Padding: invalid argument \"color\"");
 
     return new DAR_Padding(args[0].AsClip(), dx, dy, align, cl, env);
 }
