@@ -25,12 +25,14 @@
 
 #pragma  warning(disable:4996)
 
+#define NUM_METHODS 15
+
 class DAR_Padding : public GenericVideoFilter {
 
     PClip padded;
 
 public:
-    DAR_Padding(PClip _child, const int _dar_x, const int _dar_Y,
+    DAR_Padding(PClip _child, const float _dar_x, const float _dar_Y,
                 const int _color, IScriptEnvironment* env);
     ~DAR_Padding() { }
     PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
@@ -41,7 +43,7 @@ class AR_Resize : public GenericVideoFilter {
     PClip resized;
 
 public:
-    AR_Resize(PClip _child, const char *mode, const int _ar_x, const int _ar_y,
+    AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
               const bool expand, const float srcl, const float srct,
               const float srcr, const float srcb, const char *_resizer,
               const float ep0, const float ep1, IScriptEnvironment* env);
@@ -50,11 +52,11 @@ public:
 };
 
 DAR_Padding::
-DAR_Padding(PClip _child, const int _dar_x, const int _dar_y, const int _color,
+DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int _color,
             IScriptEnvironment* env) : GenericVideoFilter(_child)
 {
-    int dar_x = !_dar_x ? vi.width : _dar_x;
-    int dar_y = !_dar_y ? vi.height : _dar_y;
+    double dar_x = !_dar_x ? (double)vi.width : (double)_dar_x;
+    double dar_y = !_dar_y ? (double)vi.height : (double)_dar_y;
     int color = !_color ? 0x000000 : _color;
 
     int dest_width = vi.width;
@@ -63,10 +65,10 @@ DAR_Padding(PClip _child, const int _dar_x, const int _dar_y, const int _color,
     int subsample_h = vi.SubsampleH();
     int subsample_v = vi.SubsampleV();
 
-    if (((double)dest_width / dest_height) > ((double)dar_x / dar_y))
-        dest_height = (int)ceil((double)dest_width * dar_y / dar_x);
-    else if (((double)dest_width / dest_height) < ((double)dar_x / dar_y)) 
-        dest_width = (int)ceil((double)dest_height * dar_x / dar_y);
+    if (((double)dest_width / dest_height) > (dar_x / dar_y))
+        dest_height = (int)ceil(dest_width * dar_y / dar_x);
+    else if (((double)dest_width / dest_height) < (dar_x / dar_y)) 
+        dest_width = (int)ceil(dest_height * dar_x / dar_y);
 
     dest_width += dest_width % subsample_h;
     dest_height += dest_height % subsample_v;
@@ -96,7 +98,7 @@ GetFrame(int n, IScriptEnvironment* env)
 }
 
 AR_Resize::
-AR_Resize(PClip _child, const char *mode, const int _ar_x, const int _ar_y,
+AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
           const bool expand, const float srcl, const float srct, const float srcr,
           const float srcb, const char *_resizer, const float ep0, const float ep1,
           IScriptEnvironment* env) : GenericVideoFilter(_child)
@@ -109,23 +111,23 @@ AR_Resize(PClip _child, const char *mode, const int _ar_x, const int _ar_y,
                       srcb > 0 ? (int)ceil(srcb) :
                       abs(vi.height - (int)ceil(srct - srcb));
 
-    int ar_x, ar_y;
+    double ar_x, ar_y;
 
     if (!stricmp(mode, "dar")) {
-        ar_x = !_ar_x ? vi.width : _ar_x;
-        ar_y = !_ar_y ? vi.height : _ar_y;
-        if (((((double)dest_width / dest_height) > ((double)ar_x / ar_y)) && expand) ||
-            ((((double)dest_width / dest_height) < ((double)ar_x / ar_y)) && !expand))
-            dest_height = (int)ceil((double)dest_width * ar_y / ar_x);
-        else if (((double)dest_width / dest_height) != ((double)ar_x / ar_y))
-            dest_width = (int)ceil((double)dest_height * ar_x / ar_y);
+        ar_x = !_ar_x ? (double)vi.width : (double)_ar_x;
+        ar_y = !_ar_y ? (double)vi.height : (double)_ar_y;
+        if (((((double)dest_width / dest_height) > (ar_x / ar_y)) && expand) ||
+            ((((double)dest_width / dest_height) < (ar_x / ar_y)) && !expand))
+            dest_height = (int)ceil(dest_width * ar_y / ar_x);
+        else if (((double)dest_width / dest_height) != (ar_x / ar_y))
+            dest_width = (int)ceil(dest_height * ar_x / ar_y);
     } else { // par or sar
-        ar_x = !_ar_x ? 1 : _ar_x;
-        ar_y = !_ar_y ? 1 : _ar_y;
+        ar_x = !_ar_x ? 1.0 : (double)_ar_x;
+        ar_y = !_ar_y ? 1.0 : (double)_ar_y;
         if (((ar_x > ar_y) && expand) || ((ar_x < ar_y) && !expand))
-            dest_width = (int)ceil(dest_width * ((double)ar_x / ar_y));
+            dest_width = (int)ceil(dest_width * (ar_x / ar_y));
         else if (ar_x != ar_y)
-            dest_height = (int)ceil(dest_height * ((double)ar_y / ar_x));
+            dest_height = (int)ceil(dest_height * (ar_y / ar_x));
     }
 
     dest_width += dest_width % vi.SubsampleH();
@@ -143,7 +145,7 @@ AR_Resize(PClip _child, const char *mode, const int _ar_x, const int _ar_y,
     } resize_method;
 
     resize_method resizer = {};
-    resize_method method[] = {
+    resize_method method[NUM_METHODS] = {
         {"PointResize",    5, 1,  0, 0},
         {"BilinearResize", 8, 1,  0, 0},
         {"LanczosResize",  7, 2,  3, 0},
@@ -160,7 +162,7 @@ AR_Resize(PClip _child, const char *mode, const int _ar_x, const int _ar_y,
         {"Hermite",             7, 3,     0.0,     0.0},
         {"Robidoux",            8, 3,  0.3782,  0.3109},
     };
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < NUM_METHODS; i++) {
         if (!strnicmp(method[i].name, _resizer, method[i].len_name))
             resizer = method[i];
     }
@@ -209,8 +211,8 @@ PVideoFrame __stdcall AR_Resize::GetFrame(int n, IScriptEnvironment* env)
 
 AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
-    const int dx = args[1].AsInt(0);
-    const int dy = args[2].AsInt(0);
+    const float dx = args[1].AsFloat(0.0);
+    const float dy = args[2].AsFloat(0.0);
     const int cl = args[3].AsInt(0);
 
     if (dx < 0)
@@ -226,8 +228,8 @@ AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvir
 AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
     const char *mode = args[1].AsString("dar");
-    const int ax = args[2].AsInt(0);
-    const int ay = args[3].AsInt(0);
+    const float ax = args[2].AsFloat(0.0);
+    const float ay = args[3].AsFloat(0.0);
     const bool expand = args[4].AsBool(true);
     const float src_l = args[5].AsFloat(0.0);
     const float src_t = args[6].AsFloat(0.0);
@@ -250,8 +252,8 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
 
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env)
 {
-    env->AddFunction("DAR_Padding", "c[dar_x]i[dar_y]i[color]i", Create_DAR_Padding, 0);
-    env->AddFunction("AR_Resize", "c[mode]s[ar_x]i[ar_y]i[expand]b[src_right]f[src_top]f"
+    env->AddFunction("DAR_Padding", "c[dar_x]f[dar_y]f[color]i", Create_DAR_Padding, 0);
+    env->AddFunction("AR_Resize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
                      "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f", Create_AR_Resize, 0);
     return 0;
 }
