@@ -64,6 +64,10 @@ DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int alig
 
     int subsample_h = vi.SubsampleH();
     int subsample_v = vi.SubsampleV();
+    if (align % subsample_h)
+        env->ThrowError("DAR_Padding: \"align\" needs to be multiple of %d.", subsample_h);
+    if (align % subsample_v)
+        env->ThrowError("DAR_Padding: \"align\" needs to be multiple of %d.", subsample_v);
 
     if (((double)dest_width / dest_height) > (dar_x / dar_y))
         dest_height = (int)ceil(dest_width * dar_y / dar_x);
@@ -223,7 +227,7 @@ AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvir
     if (dy < 0)
         env->ThrowError("DAR_Padding: invalid argument \"dar_y\"");
     if (align < 1)
-        env->ThrowError("DAR_Padding: \"align\" needs 1 or higher integer.");
+        env->ThrowError("DAR_Padding: \"align\" needs to be 1 or higher integer.");
     if (cl < 0 || cl > 0xffffff)
         env->ThrowError("DAR_Padding: invalid argument \"color\"");
 
