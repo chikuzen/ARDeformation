@@ -33,7 +33,7 @@ class DAR_Padding : public GenericVideoFilter {
 
 public:
     DAR_Padding(PClip _child, const float _dar_x, const float _dar_Y,
-                const int _color, IScriptEnvironment* env);
+                const int align, const int _color, IScriptEnvironment* env);
     ~DAR_Padding() { }
     PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
 };
@@ -52,8 +52,8 @@ public:
 };
 
 DAR_Padding::
-DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int _color,
-            IScriptEnvironment* env) : GenericVideoFilter(_child)
+DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int align,
+            const int _color, IScriptEnvironment* env) : GenericVideoFilter(_child)
 {
     double dar_x = !_dar_x ? (double)vi.width : (double)_dar_x;
     double dar_y = !_dar_y ? (double)vi.height : (double)_dar_y;
@@ -75,9 +75,11 @@ DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int _col
 
     int pad_left   = ((dest_width - vi.width) >> 1)
                     - (((dest_width - vi.width) >> 1) % subsample_h);
+    pad_left -= pad_left % align;
     int pad_right  = dest_width - (vi.width + pad_left);
     int pad_top    = ((dest_height - vi.height) >> 1)
                     - (((dest_height - vi.height) >> 1) % subsample_v);
+    pad_top -= pad_top % align;
     int pad_bottom = dest_height - (vi.height + pad_top);
 
     vi.width = dest_width;
@@ -213,16 +215,19 @@ AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvir
 {
     const float dx = args[1].AsFloat(0.0);
     const float dy = args[2].AsFloat(0.0);
-    const int cl = args[3].AsInt(0);
+    const int align = args[3].AsInt(16);
+    const int cl = args[4].AsInt(0);
 
     if (dx < 0)
         env->ThrowError("DAR_Padding: invalid argument \"dar_x\"");
     if (dy < 0)
         env->ThrowError("DAR_Padding: invalid argument \"dar_y\"");
+    if (align < 1)
+        env->ThrowError("DAR_Padding: \"align\" needs 1 or higher integer.");
     if (cl < 0 || cl > 0xffffff)
         env->ThrowError("DAR_Padding: invalid argument \"color\"");
 
-    return new DAR_Padding(args[0].AsClip(), dx, dy, cl, env);
+    return new DAR_Padding(args[0].AsClip(), dx, dy, align, cl, env);
 }
 
 AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnvironment* env)
@@ -252,7 +257,7 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
 
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env)
 {
-    env->AddFunction("DAR_Padding", "c[dar_x]f[dar_y]f[color]i", Create_DAR_Padding, 0);
+    env->AddFunction("DAR_Padding", "c[dar_x]f[dar_y]f[align]i[color]i", Create_DAR_Padding, 0);
     env->AddFunction("AR_Resize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
                      "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f", Create_AR_Resize, 0);
     return 0;
