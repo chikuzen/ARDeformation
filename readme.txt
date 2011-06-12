@@ -17,6 +17,13 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ********************************************************************************
 
+REQUIREMENT:
+
+*AviSynth2.6.0alpha3 or later
+*SSE capable CPU
+*msvcr100.dll
+
+
 USAGE:
 
 DAR_Padding(clip, float "dar_x", float "dar_y", int "align", int "color")
