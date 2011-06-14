@@ -25,8 +25,6 @@
 
 #pragma  warning(disable:4996)
 
-#define NUM_METHODS 15
-
 class DAR_Padding : public GenericVideoFilter {
 
     PClip padded;
@@ -156,7 +154,7 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
     } resize_method;
 
     resize_method resizer = {};
-    resize_method method[NUM_METHODS] = {
+    resize_method methods[] = {
         {"PointResize",    5, 1,  0, 0},
         {"BilinearResize", 8, 1,  0, 0},
         {"LanczosResize",  7, 2,  3, 0},
@@ -172,10 +170,11 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
         {"Catmull-Rom",        11, 3,     0.0,     0.5},
         {"Hermite",             7, 3,     0.0,     0.0},
         {"Robidoux",            8, 3,  0.3782,  0.3109},
+        {"", 0}
     };
-    for (int i = 0; i < NUM_METHODS; i++) {
-        if (!strnicmp(method[i].name, _resizer, method[i].len_name))
-            resizer = method[i];
+    for (int i = 0; methods[i].len_name; i++) {
+        if (!strnicmp(methods[i].name, _resizer, methods[i].len_name))
+            resizer = methods[i];
     }
 
     switch (resizer.argstype) {
