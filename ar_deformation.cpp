@@ -58,31 +58,28 @@ DAR_Padding(PClip _child, const float _dar_x, const float _dar_y, const int alig
     double dar_x = !_dar_x ? (double)vi.width : (double)_dar_x;
     double dar_y = !_dar_y ? (double)vi.height : (double)_dar_y;
 
-    int dest_width = vi.width;
-    int dest_height = vi.height;
+    double flag = vi.width * dar_y - vi.height * dar_x;
+    int dest_width  = flag < 0 ? (int)ceil(vi.height * dar_x / dar_y) : vi.width;
+    int dest_height = flag > 0 ? (int)ceil(dest_width * dar_y / dar_x) : vi.height;
 
     int subsample_h = vi.SubsampleH();
     int subsample_v = vi.SubsampleV();
-    if (align % subsample_h)
-        env->ThrowError("DAR_Padding: \"align\" needs to be multiple of %d.", subsample_h);
-    if (align % subsample_v)
-        env->ThrowError("DAR_Padding: \"align\" needs to be multiple of %d.", subsample_v);
-
-    if (((double)dest_width / dest_height) > (dar_x / dar_y))
-        dest_height = (int)ceil(dest_width * dar_y / dar_x);
-    else if (((double)dest_width / dest_height) < (dar_x / dar_y)) 
-        dest_width = (int)ceil(dest_height * dar_x / dar_y);
 
     dest_width += dest_width % subsample_h;
     dest_height += dest_height % subsample_v;
 
-    int pad_left = ((dest_width - vi.width) >> 1) - (((dest_width - vi.width) >> 1) % subsample_h);
-    if ((pad_left -= (pad_left % align)) % subsample_h)
-        env->ThrowError("DAR_Padding: Invalid value of \"align\".");
+    int pad_left = (dest_width - vi.width) >> 1;
+    pad_left -= (pad_left % subsample_h);
+    while ((pad_left % align) && (pad_left > 0))
+        pad_left -= subsample_h;
+
     int pad_right = dest_width - (vi.width + pad_left);
-    int pad_top = ((dest_height - vi.height) >> 1) - (((dest_height - vi.height) >> 1) % subsample_v);
-    if ((pad_top -= (pad_top % align)) % subsample_v)
-        env->ThrowError("DAR_Padding: Invalid value of \"align\".");
+
+    int pad_top = (dest_height - vi.height) >> 1;
+    pad_top -= (pad_top % subsample_v);
+    while ((pad_top % align) && (pad_top > 0))
+        pad_top -= subsample_v;
+
     int pad_bottom = dest_height - (vi.height + pad_top);
 
     vi.width = dest_width;
@@ -121,10 +118,10 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
     if (!stricmp(mode, "dar")) {
         ar_x = !_ar_x ? (double)vi.width : (double)_ar_x;
         ar_y = !_ar_y ? (double)vi.height : (double)_ar_y;
-        if (((((double)dest_width / dest_height) > (ar_x / ar_y)) && expand) ||
-            ((((double)dest_width / dest_height) < (ar_x / ar_y)) && !expand))
+        double flag = dest_width * ar_y - dest_height * ar_x;
+        if ((flag > 0  && expand) || (flag < 0 && !expand))
             dest_height = (int)ceil(dest_width * ar_y / ar_x);
-        else if (((double)dest_width / dest_height) != (ar_x / ar_y))
+        else if (flag)
             dest_width = (int)ceil(dest_height * ar_x / ar_y);
     } else { // par or sar
         ar_x = !_ar_x ? 1.0 : (double)_ar_x;
@@ -246,11 +243,9 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
     const float ep1 = args[11].IsFloat() ? args[11].AsFloat() : -FLT_MAX;
 
     if (stricmp(mode, "dar") && stricmp(mode, "par") && stricmp(mode, "sar"))
-        env->ThrowError("AR_Resize: Invalid arguments \"mode\".");
-    if (ax < 0)
-        env->ThrowError("AR_Resize: Invalid arguments \"ar_x\".");
-    if (ay < 0)
-        env->ThrowError("AR_Resize: Invalid arguments \"ar_y\".");
+        env->ThrowError("AR_Resize: Invalid argument \"mode\".");
+    if (ax < 0 || ay < 0)
+        env->ThrowError("AR_Resize: \"ar_x\" and \"ar_y\" needs to be 0 or higher values.");
 
     return new AR_Resize(args[0].AsClip(), mode, ax, ay, expand, src_l, src_t,
                          src_r, src_b, resizer, ep0, ep1, env);
@@ -258,8 +253,8 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
 
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env)
 {
-    env->AddFunction("DAR_Padding", "c[dar_x]f[dar_y]f[align]i[color]i", Create_DAR_Padding, 0);
-    env->AddFunction("AR_Resize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
+    env->AddFunction("DARPadding", "c[dar_x]f[dar_y]f[align]i[color]i", Create_DAR_Padding, 0);
+    env->AddFunction("ARResize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
                      "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f", Create_AR_Resize, 0);
     return 0;
 }

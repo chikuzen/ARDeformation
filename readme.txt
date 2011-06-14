@@ -26,7 +26,7 @@ REQUIREMENT:
 
 USAGE:
 
-DAR_Padding(clip, float "dar_x", float "dar_y", int "align", int "color")
+DARPadding(clip, float "dar_x", float "dar_y", int "align", int "color")
 
     Do padding to the clip in specified display aspect ratio.
 
@@ -36,7 +36,7 @@ DAR_Padding(clip, float "dar_x", float "dar_y", int "align", int "color")
     color: color of borders (default: $000000(black)).
 
 
-AR_Resize(clip, string "mode", float "ar_x", float "ar_y", bool "expand",
+ARResize(clip, string "mode", float "ar_x", float "ar_y", bool "expand",
           float "src_left", float "src_top", float "src_right", float "src_bottom",
           string "resizer", float "ep0", float "ep1")
 
