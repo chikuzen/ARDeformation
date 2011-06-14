@@ -46,7 +46,8 @@ public:
     AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
               const bool expand, const float srcl, const float srct,
               const float srcr, const float srcb, const char *_resizer,
-              const float ep0, const float ep1, IScriptEnvironment* env);
+              const float ep0, const float ep1, const int dx, const int dy,
+              IScriptEnvironment* env);
     ~AR_Resize() { }
     PVideoFrame __stdcall AR_Resize::GetFrame(int n, IScriptEnvironment* env);
 };
@@ -103,40 +104,48 @@ AR_Resize::
 AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
           const bool expand, const float srcl, const float srct, const float srcr,
           const float srcb, const char *_resizer, const float ep0, const float ep1,
-          IScriptEnvironment* env) : GenericVideoFilter(_child)
+          const int dx, const int dy, IScriptEnvironment* env) : GenericVideoFilter(_child)
 {
-    int dest_width = srcr == 0.0 ? vi.width :
-                     srcr > 0 ? (int)ceil(srcr) :
-                     abs(vi.width - (int)ceil(srcl - srcr));
+    double dest_width, dest_height;
+    dest_width = !srcr ? (double)vi.width :
+                 srcr > 0 ? (double)srcr :
+                 fabs((double)vi.width - srcl + srcr);
 
-    int dest_height = srcb == 0.0 ? vi.height :
-                      srcb > 0 ? (int)ceil(srcb) :
-                      abs(vi.height - (int)ceil(srct - srcb));
+    dest_height = !srcb ? vi.height :
+                  srcb > 0 ? ceil(srcb) :
+                  fabs((double)vi.height - srct + srcb);
 
     double ar_x, ar_y;
-
     if (!stricmp(mode, "dar")) {
         ar_x = !_ar_x ? (double)vi.width : (double)_ar_x;
         ar_y = !_ar_y ? (double)vi.height : (double)_ar_y;
         double flag = dest_width * ar_y - dest_height * ar_x;
         if ((flag > 0  && expand) || (flag < 0 && !expand))
-            dest_height = (int)ceil(dest_width * ar_y / ar_x);
+            dest_height = dest_width * ar_y / ar_x;
         else if (flag)
-            dest_width = (int)ceil(dest_height * ar_x / ar_y);
+            dest_width = dest_height * ar_x / ar_y;
     } else { // par or sar
         ar_x = !_ar_x ? 1.0 : (double)_ar_x;
         ar_y = !_ar_y ? 1.0 : (double)_ar_y;
         if (((ar_x > ar_y) && expand) || ((ar_x < ar_y) && !expand))
-            dest_width = (int)ceil(dest_width * (ar_x / ar_y));
+            dest_width = dest_width * (ar_x / ar_y);
         else if (ar_x != ar_y)
-            dest_height = (int)ceil(dest_height * (ar_y / ar_x));
+            dest_height = dest_height * (ar_y / ar_x);
     }
 
-    dest_width += dest_width % vi.SubsampleH();
-    dest_height += dest_height % vi.SubsampleV();
+    if (dx) {
+        dest_height *= dx / dest_width;
+        dest_width = (double)dx;
+    } else if (dy) {
+        dest_width *= dy / dest_height;
+        dest_height = (double)dy;
+    }
 
-    vi.width = dest_width;
-    vi.height = dest_height;
+    dest_width = ceil(dest_width) + (int)ceil(dest_width) % vi.SubsampleH();
+    dest_height = ceil(dest_height) + (int)ceil(dest_height) % vi.SubsampleV();
+
+    vi.width = (int)dest_width;
+    vi.height = (int)dest_height;
 
     typedef struct {
         char name[32];
@@ -172,7 +181,8 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
     switch (resizer.argstype) {
         case 1:
             try {
-                AVSValue resizeargs[] = {child, dest_width, dest_height, srcl, srct, srcr, srcb};
+                AVSValue resizeargs[]= {child, (int)dest_width, (int)dest_height,
+                                        srcl, srct, srcr, srcb};
                 resized = env->Invoke(resizer.name, AVSValue(resizeargs, 7)).AsClip();
             } catch (IScriptEnvironment::NotFound) {
                 env->ThrowError("AR_Resize: Couldn't Invoke %s.", resizer.name);
@@ -181,7 +191,7 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
         case 2:
             resizer.ex0 = ep0 == -FLT_MAX ? resizer.ex0 : ep0;
             try {
-                AVSValue resizeargs[] = {child, dest_width, dest_height,
+                AVSValue resizeargs[] = {child, (int)dest_width, (int)dest_height,
                                          srcl, srct, srcr, srcb, (int)resizer.ex0};
                 resized = env->Invoke(resizer.name, AVSValue(resizeargs, 8)).AsClip();
             } catch (IScriptEnvironment::NotFound) {
@@ -192,7 +202,7 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
             resizer.ex0 = ep0 == -FLT_MAX ? resizer.ex0 : ep0;
             resizer.ex1 = ep1 == -FLT_MAX ? resizer.ex1 : ep1;
             try {
-                AVSValue resizeargs[] = {child, dest_width, dest_height,
+                AVSValue resizeargs[] = {child, (int)dest_width, (int)dest_height,
                                          resizer.ex0, resizer.ex1,
                                          srcl, srct, srcr, srcb};
                 resized = env->Invoke("BicubicResize", AVSValue(resizeargs, 9)).AsClip();
@@ -241,20 +251,25 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
     const char *resizer = args[9].AsString("Bicubic");
     const float ep0 = args[10].IsFloat() ? args[10].AsFloat() : -FLT_MAX;
     const float ep1 = args[11].IsFloat() ? args[11].AsFloat() : -FLT_MAX;
+    const int dx = args[12].AsInt(0);
+    const int dy = args[13].AsInt(0);
 
     if (stricmp(mode, "dar") && stricmp(mode, "par") && stricmp(mode, "sar"))
-        env->ThrowError("AR_Resize: Invalid argument \"mode\".");
+        env->ThrowError("ARResize: Invalid argument \"mode\".");
     if (ax < 0 || ay < 0)
-        env->ThrowError("AR_Resize: \"ar_x\" and \"ar_y\" needs to be 0 or higher values.");
+        env->ThrowError("ARResize: \"ar_x\" and \"ar_y\" needs to be 0 or higher values.");
+    if (dx < 0 || dy < 0)
+        env->ThrowError("ARResize: \"dest_w\" and \"dest_h\" needs to be 0 or higher integers.");
 
     return new AR_Resize(args[0].AsClip(), mode, ax, ay, expand, src_l, src_t,
-                         src_r, src_b, resizer, ep0, ep1, env);
+                         src_r, src_b, resizer, ep0, ep1, dx, dy, env);
 }
 
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env)
 {
     env->AddFunction("DARPadding", "c[dar_x]f[dar_y]f[align]i[color]i", Create_DAR_Padding, 0);
     env->AddFunction("ARResize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
-                     "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f", Create_AR_Resize, 0);
+                     "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f[dest_w]i[dest_h]i",
+                     Create_AR_Resize, 0);
     return 0;
 }
