@@ -36,27 +36,39 @@ DARPadding(clip, float "dar_x", float "dar_y", int "align", int "color")
     color: color of borders (default: $000000(black)).
 
 
-ARResize(clip, string "mode", float "ar_x", float "ar_y", bool "expand",
-          float "src_left", float "src_top", float "src_right", float "src_bottom",
-          string "resizer", float "ep0", float "ep1")
+ARResize(clip, float "ar_x", float "ar_y", float "src_left", float "src_top",
+         float "src_right", float "src_bottom", float "ep0", float "ep1",
+         int "dest_w", int "dest_h", string "resizer", bool "expand", string "mode")
 
     Resize the clip in specified display/sample(pixel) aspect ratio.
 
-    mode    : type of aspect ratio.
-              acceptable values -- "dar", "sar" and "par" (default: "dar").
     ar_x    : numerater of AR (default: width of clip(dar) / 1(sar/par)).
     ar_y    : denominator of AR (default: height of clip(dar) / 1(sar/par)).
-    expand  : Choice of expansion(true) or reduction(false) (default: true).
     src_left: same as internal resizers argument.
     src_top : same as internal resizers argument.
     src_right: same as internal resizers argument.
     src_bottom: same as internal resizers argument.
+    ep0     : optional arguments for some resizers (e.g. Lanczos's "taps", Bicubic's "b")
+    ep1     : optional argument for BicubicResize("c")
+    dest_w  : specify the value of width after resized.(default: 0(undef))
+    dest_h  : specify the value of height after resized.
+              if "dest_w" is specified, this is disregarded.(default: 0(undef))
     resizer : type of resizer.
               acceptable values -- "Point", "Bilinear", "Bicubic", "Lanczos",
                                    "Lanczos4", "Blackman", "Spline16", "Spline36",
                                    "Spline64", "Sinc", "Gauss" (default: "Bicubic")
-    ep0     : optional arguments for some resizers (e.g. Lanczos's "taps", Bicubic's "b")
-    ep1     : optional argument for BicubicResize("c")
+    expand  : Choice of expansion(true) or reduction(false).
+              if "dest_w" or "dest_h" is specified, this is disregarded.(default: true).
+    mode    : type of aspect ratio.
+              acceptable values -- "dar", "sar" and "par" (default: "dar").
+
+
+EXAMPLES:
+    MPEG2Source("720x480-ntsc-squeezed-dvd.d2v)
+    ARResize(16, 9, 8, 0, 8, 0, dest_w = 1280, resizer = "lanczos")
+
+    MPEG2Source("720x480-ntsc-squeezed-dvd.d2v)
+    ARResize(40, 33, mode="par")
 
 
 SOURCECODE:

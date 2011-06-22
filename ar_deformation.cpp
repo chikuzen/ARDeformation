@@ -170,6 +170,9 @@ AR_Resize(PClip _child, const char *mode, const float _ar_x, const float _ar_y,
         {"Catmull-Rom",        11, 3,     0.0,     0.5},
         {"Hermite",             7, 3,     0.0,     0.0},
         {"Robidoux",            8, 3,  0.3782,  0.3109},
+        {"SoftCubic50",        11, 3,     0.5,     0.5},
+        {"SoftCubic75",        11, 3,    0.75,    0.25},
+        {"SoftCubic100",       12, 3,     1.0,     0.0},
         {"", 0}
     };
     for (int i = 0; methods[i].len_name; i++) {
@@ -239,19 +242,19 @@ AVSValue __cdecl Create_DAR_Padding(AVSValue args, void* user_data, IScriptEnvir
 
 AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
-    const char *mode = args[1].AsString("dar");
-    const float ax = args[2].AsFloat(0.0);
-    const float ay = args[3].AsFloat(0.0);
-    const bool expand = args[4].AsBool(true);
-    const float src_l = args[5].AsFloat(0.0);
-    const float src_t = args[6].AsFloat(0.0);
-    const float src_r = args[7].AsFloat(0.0);
-    const float src_b = args[8].AsFloat(0.0);
-    const char *resizer = args[9].AsString("Bicubic");
-    const float ep0 = args[10].IsFloat() ? args[10].AsFloat() : -FLT_MAX;
-    const float ep1 = args[11].IsFloat() ? args[11].AsFloat() : -FLT_MAX;
-    const int dx = args[12].AsInt(0);
-    const int dy = args[13].AsInt(0);
+    const float ax = args[1].AsFloat(0.0);
+    const float ay = args[2].AsFloat(0.0);
+    const float src_l = args[3].AsFloat(0.0);
+    const float src_t = args[4].AsFloat(0.0);
+    const float src_r = args[5].AsFloat(0.0);
+    const float src_b = args[6].AsFloat(0.0);
+    const float ep0 = args[7].IsFloat() ? args[10].AsFloat() : -FLT_MAX;
+    const float ep1 = args[8].IsFloat() ? args[11].AsFloat() : -FLT_MAX;
+    const int dx = args[9].AsInt(0);
+    const int dy = args[10].AsInt(0);
+    const char *resizer = args[11].AsString("Bicubic");
+    const bool expand = args[12].AsBool(true);
+    const char *mode = args[13].AsString("dar");
 
     if (stricmp(mode, "dar") && stricmp(mode, "par") && stricmp(mode, "sar"))
         env->ThrowError("ARResize: Invalid argument \"mode\".");
@@ -267,8 +270,7 @@ AVSValue __cdecl Create_AR_Resize(AVSValue args, void* user_data, IScriptEnviron
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env)
 {
     env->AddFunction("DARPadding", "c[dar_x]f[dar_y]f[align]i[color]i", Create_DAR_Padding, 0);
-    env->AddFunction("ARResize", "c[mode]s[ar_x]f[ar_y]f[expand]b[src_right]f[src_top]f"
-                     "[src_left]f[src_bottom]f[resizer]s[ep0]f[ep1]f[dest_w]i[dest_h]i",
-                     Create_AR_Resize, 0);
+    env->AddFunction("ARResize", "c[ar_x]f[ar_y]f[src_right]f[src_top]f[src_left]f[src_bottom]f"
+                     "[ep0]f[ep1]f[dest_w]i[dest_h]i[resizer]s[expand]b[mode]s", Create_AR_Resize, 0);
     return 0;
 }
