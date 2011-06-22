@@ -28,7 +28,7 @@ USAGE:
 
 DARPadding(clip, float "dar_x", float "dar_y", int "align", int "color")
 
-    Do padding to the clip in specified display aspect ratio.
+    Pad to the clip in specified display aspect ratio.
 
     dar_x: numerater of DAR (default: width of clip).
     dar_y: denominator of DAR (default: height of clip).
@@ -40,10 +40,10 @@ ARResize(clip, float "ar_x", float "ar_y", float "src_left", float "src_top",
          float "src_right", float "src_bottom", float "ep0", float "ep1",
          int "dest_w", int "dest_h", string "resizer", bool "expand", string "mode")
 
-    Resize the clip in specified display/sample(pixel) aspect ratio.
+    Resize the clip in specified display|sample(pixel) aspect ratio.
 
-    ar_x    : numerater of AR (default: width of clip(dar) / 1(sar/par)).
-    ar_y    : denominator of AR (default: height of clip(dar) / 1(sar/par)).
+    ar_x    : numerater of AR (default: width of clip(dar) or 1(sar|par)).
+    ar_y    : denominator of AR (default: height of clip(dar) or 1(sar|par)).
     src_left: same as internal resizers argument.
     src_top : same as internal resizers argument.
     src_right: same as internal resizers argument.
@@ -56,7 +56,9 @@ ARResize(clip, float "ar_x", float "ar_y", float "src_left", float "src_top",
     resizer : type of resizer.
               acceptable values -- "Point", "Bilinear", "Bicubic", "Lanczos",
                                    "Lanczos4", "Blackman", "Spline16", "Spline36",
-                                   "Spline64", "Sinc", "Gauss" (default: "Bicubic")
+                                   "Spline64", "Sinc", "Gauss", "Michael-Netravali",
+                                   "Catmull-Rom", "Hermite", "Robidoux", "SoftCubic50",
+                                   "SoftCubic75", "SoftCubic100"(default: "Bicubic")
     expand  : Choice of expansion(true) or reduction(false).
               if "dest_w" or "dest_h" is specified, this is disregarded.(default: true).
     mode    : type of aspect ratio.
