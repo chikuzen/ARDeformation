@@ -67,7 +67,7 @@ ARResize(clip, float "ar_x", float "ar_y", float "src_left", float "src_top",
 
 EXAMPLES:
     MPEG2Source("720x480-ntsc-squeezed-dvd.d2v)
-    ARResize(16, 9, 8, 0, 8, 0, dest_w = 1280, resizer = "lanczos")
+    ARResize(16, 9, 8, 0, -8, 0, dest_w = 1280, resizer = "lanczos")
 
     MPEG2Source("720x480-ntsc-squeezed-dvd.d2v)
     ARResize(40, 33, mode="par")
